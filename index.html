@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghostwriter</title>
+    <script>
+      // Apply the saved theme choice before first paint (avoids a flash of the
+      // wrong theme). 'system' stores nothing and lets CSS follow the OS.
+      try {
+        var t = localStorage.getItem('gw.theme')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/client/main.tsx"></script>
+  </body>
+</html>

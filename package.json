@@ -1,0 +1,109 @@
+{
+  "name": "ghostwriter",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "AI-facilitated book-authoring tool — Markdown-on-disk, local-first.",
+  "author": "Rich Stokoe",
+  "license": "MIT",
+  "homepage": "https://github.com/richstokoe/ghostwriter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richstokoe/ghostwriter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/richstokoe/ghostwriter/issues"
+  },
+  "keywords": [
+    "writing",
+    "authoring",
+    "novel",
+    "markdown",
+    "editor",
+    "ai",
+    "llm",
+    "local-first",
+    "electron",
+    "fastify",
+    "react"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "build": "vite build",
+    "start": "NODE_ENV=production tsx src/server/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build:client": "vite build",
+    "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --external:vite --external:@fastify/middie --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --outfile=dist-electron/preload.cjs",
+    "build:app": "npm run build:client && npm run build:electron",
+    "electron:dev": "npm run build:electron && concurrently -k -n vite,electron -c blue,magenta \"npm run dev\" \"wait-on tcp:127.0.0.1:8787 && GHOSTWRITER_DEV_URL=http://localhost:8787 electron dist-electron/main.cjs\"",
+    "electron": "npm run build:app && electron dist-electron/main.cjs",
+    "dist": "npm run build:app && electron-builder"
+  },
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.3.1",
+    "@codemirror/language-data": "^6.5.1",
+    "@fastify/static": "^7.0.4",
+    "@uiw/react-codemirror": "^4.23.6",
+    "fastify": "^4.28.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "simple-git": "^3.36.0",
+    "unified": "^11.0.5",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@fastify/middie": "^8.3.1",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "concurrently": "^9.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.ghostwriter.app",
+    "productName": "Ghostwriter",
+    "asar": true,
+    "files": [
+      "dist-electron/**/*"
+    ],
+    "extraResources": [
+      "dist/client",
+      "sample-project"
+    ],
+    "directories": {
+      "output": "dist-app"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

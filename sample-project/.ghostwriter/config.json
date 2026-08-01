@@ -1,0 +1,13 @@
+{
+  "format": "ghostwriter-config",
+  "version": 1,
+  "title": "Alice's Adventures in Wonderland",
+  "wordTarget": 30000,
+  "roles": {
+    "chapters": "manuscript",
+    "outline": "outline",
+    "characters": "characters",
+    "timeline": "timeline",
+    "voice": "voice"
+  }
+}

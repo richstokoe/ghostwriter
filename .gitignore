@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+dist-app/
+*.tsbuildinfo
+.vite/
+
+# Electron build output
+release/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Per-project tool state inside authored books
+.ghostwriter/
+# …but the bundled sample book ships with its config
+!sample-project/.ghostwriter/
+!sample-project/.ghostwriter/**
+
+# Local Claude Code settings (personal, not shared)
+.claude/settings.local.json
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
