@@ -191,7 +191,7 @@ export function FolderMapper({
         <footer className="modal-foot">
           {error && <span className="map-error">{error}</span>}
           {info && !info.autoRecognised && (
-            <span className="muted small">This folder isn’t in Ghostwriter’s default layout — map it below.</span>
+            <span className="muted small">This folder isn’t in Ghostwriter Studio’s default layout — map it below.</span>
           )}
           <div className="modal-actions">
             <button className="icon-btn" onClick={onClose}>

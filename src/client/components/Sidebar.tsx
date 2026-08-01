@@ -42,7 +42,7 @@ export function Sidebar({
       <div className="organiser-head">
         <div className="proj-title">{project?.title ?? 'Loading…'}</div>
         <div className="proj-sub">
-          <span>{project?.configured ? 'ghostwriter project' : 'markdown folder'}</span>
+          <span>{project?.configured ? 'ghostwriter studio project' : 'markdown folder'}</span>
           <button className="linklike proj-configure" onClick={onConfigure} title="Map folders to roles">
             Configure folders…
           </button>

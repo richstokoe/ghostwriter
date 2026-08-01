@@ -32,4 +32,4 @@ if (isProd) {
 }
 
 await app.listen({ port, host: '127.0.0.1' })
-console.log(`\n  Ghostwriter → http://localhost:${port}  (${isProd ? 'production' : 'dev'})\n`)
+console.log(`\n  Ghostwriter Studio → http://localhost:${port}  (${isProd ? 'production' : 'dev'})\n`)

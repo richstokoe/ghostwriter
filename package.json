@@ -1,7 +1,7 @@
 {
   "name": "ghostwriter",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "AI-facilitated book-authoring tool — Markdown-on-disk, local-first.",
   "author": "Rich Stokoe",
@@ -75,8 +75,8 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.ghostwriter.app",
-    "productName": "Ghostwriter",
+    "appId": "com.richstokoe.ghostwriter.app",
+    "productName": "Ghostwriter Studio",
     "asar": true,
     "files": [
       "dist-electron/**/*"
@@ -104,6 +104,9 @@
       "target": [
         "nsis"
       ]
+    },
+    "nsis": {
+      "license": "build/license.txt"
     }
   }
 }

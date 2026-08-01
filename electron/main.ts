@@ -46,7 +46,7 @@ async function createWindow() {
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#14161a',
-    title: 'Ghostwriter',
+    title: 'Ghostwriter Studio',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -69,8 +69,39 @@ async function openBookFolder() {
   await win.loadURL(`${baseUrl}/?root=${encodeURIComponent(res.filePaths[0])}`)
 }
 
+const DISCLAIMER =
+  'Provided "as is", without warranty of any kind. To the maximum extent permitted by law, ' +
+  'the authors accept no liability for any damage, disruption, or loss of data arising from its ' +
+  'use — you use it at your own risk. Keep your work under version control and back up anything ' +
+  'you can\'t afford to lose.'
+
+function showAbout() {
+  const opts = {
+    type: 'info' as const,
+    title: 'About Ghostwriter Studio',
+    message: `Ghostwriter Studio ${app.getVersion()}`,
+    detail: `AI-facilitated, local-first book-authoring tool.\n\n${DISCLAIMER}\n\nMIT License © Rich Stokoe`,
+    buttons: ['OK'],
+  }
+  if (win) dialog.showMessageBox(win, opts)
+  else dialog.showMessageBox(opts)
+}
+
 function buildMenu() {
+  const isMac = process.platform === 'darwin'
   const template: MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { label: 'About Ghostwriter Studio', click: showAbout },
+              { type: 'separator' },
+              { role: 'quit' },
+            ],
+          } as MenuItemConstructorOptions,
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -88,6 +119,14 @@ function buildMenu() {
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { role: 'windowMenu' },
+    ...(isMac
+      ? []
+      : [
+          {
+            role: 'help',
+            submenu: [{ label: 'About Ghostwriter Studio', click: showAbout }],
+          } as MenuItemConstructorOptions,
+        ]),
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
@@ -95,8 +134,8 @@ function buildMenu() {
 app.whenReady().then(() => {
   buildMenu()
   createWindow().catch((err) => {
-    console.error('failed to start Ghostwriter:', err)
-    dialog.showErrorBox('Ghostwriter failed to start', String(err))
+    console.error('failed to start Ghostwriter Studio:', err)
+    dialog.showErrorBox('Ghostwriter Studio failed to start', String(err))
     app.quit()
   })
 })

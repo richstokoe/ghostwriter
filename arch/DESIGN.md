@@ -1,4 +1,4 @@
-# Ghostwriter — Design
+# Ghostwriter Studio — Design
 
 An AI-facilitated book-authoring tool that productizes a Markdown + git + AI writing
 workflow: chapter+brief pairs, a codified author voice, automated prose linting,

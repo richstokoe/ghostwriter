@@ -1,4 +1,4 @@
-# Ghostwriter
+# Ghostwriter Studio
 
 AI-facilitated, local-first book-authoring tool. Markdown-on-disk; a Fastify server
 (`src/server`) exposes a small REST API that a React client (`src/client`) drives. Also ships
@@ -20,7 +20,7 @@ A project is just a folder. Its **single, canonical, portable** config lives at
 supersedes any earlier format — the legacy root `ghostwriter.json` is no longer read.
 
 The config is a **path map** from *roles* to directories, not a per-file manifest. Files inside
-a mapped directory are auto-discovered. Roles Ghostwriter consumes:
+a mapped directory are auto-discovered. Roles Ghostwriter Studio consumes:
 
 | Role         | Default dir   | Contents |
 |--------------|---------------|----------|

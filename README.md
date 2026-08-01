@@ -1,8 +1,10 @@
-# Ghostwriter — An AI-facilitated authoring suite
+# Ghostwriter Studio — An AI-facilitated authoring suite
+
+![Ghostwriter Studio](docs/images/ghostwriter-studio-logo.png)
 
 **Write a whole book with an AI collaborator that never takes the pen out of your hand.**
 
-Ghostwriter is a writing studio for novelists and long-form authors. Draft the next paragraph
+Ghostwriter Studio is a writing studio for novelists and long-form authors. Draft the next paragraph
 or a whole chapter from your own outline, in your own voice — then edit, review, and revise
 with an AI that works *to your plan*, not off on its own. Your work remains a folder of plain
 Markdown files that you own outright, versioned with git, with nothing locked in a proprietary
@@ -39,7 +41,7 @@ See [`arch/DESIGN.md`](arch/DESIGN.md) for the architecture and design decisions
 
   ![Hovering a paragraph shows a “Click to edit” affordance; the block opens in place](docs/images/Click-Block-to-Edit.png)
 - **Chapter organiser** — create, delete, reorder chapters; an editable word-count target.
-- **Open any folder** — point Ghostwriter at any folder of Markdown. If it doesn't match the
+- **Open any folder** — point Ghostwriter Studio at any folder of Markdown. If it doesn't match the
   default layout, a mapping dialog lets you assign each role (chapters, outlines, characters,
   …) to a folder; the mapping is saved to a portable `.ghostwriter/config.json`.
 - **Characters** — a bible of character notes, with a timeline and key events auto-derived
@@ -130,6 +132,15 @@ first time you open it.
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Disclaimer
+
+Ghostwriter Studio is provided **"as is", without warranty of any kind**, express or implied. It reads,
+writes, moves, and deletes files in whatever book folder you point it at, and it runs git
+operations on your behalf. **To the maximum extent permitted by law, the authors accept no
+liability for any damage, disruption, or loss of data arising from its use** — you use it at your
+own risk. Keep your work under version control and back up anything you can't afford to lose.
+See the [`LICENSE`](LICENSE) for the full legal terms.
 
 ## License
 

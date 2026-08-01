@@ -1,6 +1,6 @@
-# Contributing to Ghostwriter
+# Contributing to Ghostwriter Studio
 
-Thanks for your interest! Ghostwriter is a local-first Markdown + git + AI book-authoring
+Thanks for your interest! Ghostwriter Studio is a local-first Markdown + git + AI book-authoring
 tool. This guide covers getting set up and the conventions the codebase follows.
 
 ## Getting started
