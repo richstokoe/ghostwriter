@@ -17,7 +17,12 @@ format or a cloud you can't see.
 - 🔒 **Yours, on your machine** — everything is local-first: Markdown on your disk, versioned
   with git, drafting against a **local** LLM (Ollama / LM Studio) or a remote AI API you choose.
 
-Runs in your browser (served locally) or as a desktop app.
+![Runs in your browser (served locally) or as a desktop app](docs/images/Overview.png)
+
+Prefer to write at night? Switch between light, dark, and system themes from the sidebar —
+the prose stays on a calm, paper-like surface while the tools recede.
+
+![The same workspace in dark mode, chosen from the appearance switch in the sidebar](docs/images/Dark-mode.png)
 
 > **Local-first, secure by design.** The server binds to `127.0.0.1` only and acts as you on your
 > own machine — it reads and writes whatever book folder you point it at, and proxies to
@@ -31,6 +36,8 @@ See [`arch/DESIGN.md`](arch/DESIGN.md) for the architecture and design decisions
 - **Block editor** — preview by default; click a block to edit it.
   Tables, lists, and code fences edit as a single cohesive unit. Insert / append / delete
   blocks; which are saved as soon as you click off that block.
+
+  ![Hovering a paragraph shows a “Click to edit” affordance; the block opens in place](docs/images/Click-Block-to-Edit.png)
 - **Chapter organiser** — create, delete, reorder chapters; an editable word-count target.
 - **Open any folder** — point Ghostwriter at any folder of Markdown. If it doesn't match the
   default layout, a mapping dialog lets you assign each role (chapters, outlines, characters,
@@ -39,8 +46,13 @@ See [`arch/DESIGN.md`](arch/DESIGN.md) for the architecture and design decisions
   from the chapter outlines.
 - **Timeline** — an editable chronology, plus key events pulled from the outlines with
   one-click promote-to-timeline.
+
+  ![The Timeline view listing key events auto-derived from each chapter’s outline](docs/images/Timeline-view.png)
 - **Git automation** — status, commit, per-chapter history and diff, and opt-in
-  auto-commit-on-save.
+  auto-commit-on-save. Scope history and changes to the current chapter or the whole
+  project.
+
+  ![The Git panel showing a colour-coded working-tree diff before committing](docs/images/Git-history.png)
 - **Voice & lint** — a house-style prose linter (the "signs of AI writing" checks) with a
   live lint panel.
 - **AI drafting** — draft the next paragraph inline from inside any empty block, or write a
@@ -51,6 +63,8 @@ See [`arch/DESIGN.md`](arch/DESIGN.md) for the architecture and design decisions
 - **Console** — a toggleable activity panel logging every operation (git, file, AI, …).
 
 ## Run
+
+Download the pre-built apps from [Releases](https://github.com/richstokoe/ghostwriter/releases).
 
 ```bash
 npm install

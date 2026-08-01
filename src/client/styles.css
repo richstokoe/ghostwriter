@@ -293,12 +293,16 @@ body {
   flex-direction: column;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
   /* Terminal-style surface: stays dark in every theme, so log tag colours
-     stay readable. Re-map the palette vars for everything nested inside. */
+     stay readable. Re-map the palette vars for everything nested inside, and
+     set an explicit text colour so rows don't inherit the (dark) body colour
+     in light mode. */
   --bg-2: #1a1d23;
   --bg-3: #21252d;
   --border: #2b303a;
   --text: #e7e9ee;
   --muted: #8b93a1;
+  --prose: #d9dce3;
+  color: var(--text);
 }
 .console-head {
   display: flex;
@@ -755,6 +759,25 @@ body {
 .commit-box textarea:focus { outline: none; border-color: var(--accent-dim); }
 
 .git-error { color: var(--bad); font-size: 12px; margin: 0; }
+
+.git-scope { display: flex; gap: 3px; padding: 10px 12px 0; }
+.git-scope button {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 550;
+  padding: 5px 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.git-scope button:hover { color: var(--text); }
+.git-scope button.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #fff;
+}
 
 .git-tabs { display: flex; gap: 4px; padding: 10px 12px 0; }
 .git-tabs button {

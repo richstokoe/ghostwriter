@@ -21,6 +21,9 @@ export function GitPanel({
   onChanged: () => Promise<void> | void
 }) {
   const [view, setView] = useState<'changes' | 'history'>('changes')
+  const [scope, setScope] = useState<'project' | 'chapter'>(() =>
+    localStorage.getItem('gw.gitScope') === 'chapter' ? 'chapter' : 'project',
+  )
   const [diffText, setDiffText] = useState('')
   const [commits, setCommits] = useState<GitCommit[]>([])
   const [activeHash, setActiveHash] = useState<string | undefined>()
@@ -30,31 +33,40 @@ export function GitPanel({
 
   const isRepo = git?.isRepo ?? false
 
+  // When scoped to the chapter, filter by the selected file; otherwise (whole
+  // project) pass no path so History/Changes show the entire repository and
+  // stay stable as you navigate between chapters.
+  const scopePath = scope === 'chapter' ? (selectedFile ?? undefined) : undefined
+
+  useEffect(() => {
+    localStorage.setItem('gw.gitScope', scope)
+  }, [scope])
+
   useEffect(() => {
     setMessage(chapterTitle ? `Update ${chapterTitle}` : 'Update manuscript')
   }, [chapterTitle])
 
-  // Working-tree diff for the current chapter.
+  // Working-tree diff for the current scope.
   useEffect(() => {
     if (!isRepo || view !== 'changes') return
     setActiveHash(undefined)
-    gitDiff(selectedFile ?? undefined, undefined, root)
+    gitDiff(scopePath, undefined, root)
       .then(setDiffText)
       .catch(() => setDiffText(''))
-  }, [isRepo, view, selectedFile, root, git])
+  }, [isRepo, view, scopePath, root, git])
 
-  // Commit history for the current chapter.
+  // Commit history for the current scope.
   useEffect(() => {
     if (!isRepo || view !== 'history') return
-    gitLog(selectedFile ?? undefined, root)
+    gitLog(scopePath, root)
       .then(setCommits)
       .catch(() => setCommits([]))
-  }, [isRepo, view, selectedFile, root, git])
+  }, [isRepo, view, scopePath, root, git])
 
   const showCommit = async (hash: string) => {
     setActiveHash(hash)
     try {
-      setDiffText(await gitDiff(selectedFile ?? undefined, hash, root))
+      setDiffText(await gitDiff(scopePath, hash, root))
     } catch {
       setDiffText('')
     }
@@ -79,7 +91,7 @@ export function GitPanel({
     try {
       await gitCommit(message, undefined, root) // commit all staged/working changes
       await onChanged()
-      if (view === 'history') gitLog(selectedFile ?? undefined, root).then(setCommits).catch(() => {})
+      if (view === 'history') gitLog(scopePath, root).then(setCommits).catch(() => {})
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -141,6 +153,23 @@ export function GitPanel({
 
       {error && <p className="git-error pad">{error}</p>}
 
+      <div className="git-scope" role="group" aria-label="History & diff scope">
+        <button
+          className={scope === 'chapter' ? 'active' : ''}
+          onClick={() => setScope('chapter')}
+          title="Show history and changes for the current chapter only"
+        >
+          This chapter
+        </button>
+        <button
+          className={scope === 'project' ? 'active' : ''}
+          onClick={() => setScope('project')}
+          title="Show history and changes for the whole project"
+        >
+          Whole project
+        </button>
+      </div>
+
       <div className="git-tabs">
         <button className={view === 'changes' ? 'active' : ''} onClick={() => setView('changes')}>
           Changes
@@ -152,7 +181,11 @@ export function GitPanel({
 
       {view === 'history' && (
         <ol className="commits">
-          {commits.length === 0 && <li className="muted">No commits yet for this chapter.</li>}
+          {commits.length === 0 && (
+            <li className="muted">
+              {scope === 'chapter' ? 'No commits yet for this chapter.' : 'No commits yet.'}
+            </li>
+          )}
           {commits.map((c) => (
             <li
               key={c.hash}
@@ -171,7 +204,9 @@ export function GitPanel({
         text={diffText}
         emptyLabel={
           view === 'changes'
-            ? 'No uncommitted changes in this chapter.'
+            ? scope === 'chapter'
+              ? 'No uncommitted changes in this chapter.'
+              : 'No uncommitted changes.'
             : 'Select a commit to view its changes.'
         }
       />
