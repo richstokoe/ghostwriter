@@ -289,34 +289,3 @@ THE END
                        AT THE BALLANTYNE PRESS
                            TAVISTOCK STREET
                                  LONDON
-
-       *       *       *       *       *
-
-Transcriber's Notes:
-
-Page 8, opening quote added to text (doorway; "and even if)
-
-Page 33, "she" changed to "she's" (And she's such a)
-
-Page 37, "quiet" changed to "quite" (I'm quite tired of)
-
-Page 41, colon changed to period (arm, yer honour.)
-
-Page 42, "wont" changed to "want" (want to stay)
-
-Page 66, closing quotation mark added (to-morrow----")
-
-Page 69, single quotation mark changed to double (cat," said the
-Duchess)
-
-Page 91, word "to" added to text (minute or two to)
-
-Page 103, word "as" added to the text (just as she had)
-
-Page 104, "hedge-hog" changed to "hedgehog" (send the hedgehog to)
-
-Page 126, end parenthesis added ("No, never")
-
-Page 153, added an apostrophe (What's in it?)
-
-End of Project Gutenberg's Alice's Adventures in Wonderland, by Lewis Carroll
