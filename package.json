@@ -1,7 +1,7 @@
 {
   "name": "ghostwriter",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "AI-facilitated book-authoring tool — Markdown-on-disk, local-first.",
   "author": "Rich Stokoe",
@@ -83,7 +83,11 @@
     ],
     "extraResources": [
       "dist/client",
-      "sample-project"
+      "sample-project",
+      {
+        "from": "docs/images/ghostwriter-studio-icon.png",
+        "to": "icon.png"
+      }
     ],
     "directories": {
       "output": "dist-app"
@@ -92,7 +96,8 @@
       "target": [
         "AppImage"
       ],
-      "category": "Office"
+      "category": "Office",
+      "icon": "docs/images/ghostwriter-studio-icon.png"
     },
     "mac": {
       "target": [
@@ -103,7 +108,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "docs/images/ghostwriter-studio.ico"
     },
     "nsis": {
       "license": "build/license.txt"

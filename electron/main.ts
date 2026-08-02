@@ -14,6 +14,18 @@ function resourceBase(): string {
   return app.isPackaged ? process.resourcesPath : path.join(__dirname, '..')
 }
 
+/**
+ * The window/taskbar icon. Linux needs a PNG (the .ico is only used by the
+ * Windows installer via electron-builder). Bundled to resources/icon.png when
+ * packaged; read from docs/images in dev.
+ */
+function appIconPath(): string | undefined {
+  const p = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.png')
+    : path.join(__dirname, '..', 'docs', 'images', 'ghostwriter-studio-icon.png')
+  return fs.existsSync(p) ? p : undefined
+}
+
 /** Copy the bundled sample book into a writable location on first run. */
 function ensureDefaultProject(resBase: string): string {
   const dest = path.join(app.getPath('userData'), 'sample-project')
@@ -47,6 +59,7 @@ async function createWindow() {
     minHeight: 600,
     backgroundColor: '#14161a',
     title: 'Ghostwriter Studio',
+    icon: appIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
