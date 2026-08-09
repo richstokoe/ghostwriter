@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import CodeMirror from '@uiw/react-codemirror'
@@ -8,8 +8,41 @@ import { languages } from '@codemirror/language-data'
 import type { Block as BlockT } from '../../shared/blocks'
 import { AiWriteButton } from './AiWriteButton'
 
+// A CodeMirror theme that reads the app's own CSS variables, so the editor honours
+// light/dark like everything else (instead of the fixed dark theme it used before).
+// Values compile to real CSS rules, so `var(--…)` resolves against the active theme.
+const appTheme = EditorView.theme({
+  '&': { backgroundColor: 'transparent', color: 'var(--prose)' },
+  '.cm-content': { padding: '0', caretColor: 'var(--prose)' },
+  '.cm-line': { padding: '0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--prose)' },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+    backgroundColor: 'var(--accent-dim)',
+  },
+})
+
 // lineWrapping stops the editor scrolling horizontally (no more horizontal bar).
-const mdExtensions = [markdown({ base: markdownLanguage, codeLanguages: languages }), EditorView.lineWrapping]
+const mdExtensions = [
+  markdown({ base: markdownLanguage, codeLanguages: languages }),
+  EditorView.lineWrapping,
+  appTheme,
+]
+
+// A GFM table's delimiter row is only pipes, colons, dashes and spaces (with ≥1 dash).
+const TABLE_DELIM = /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/m
+
+/**
+ * "Ordinary text" blocks — paragraphs, headings, lists, blockquotes — edit in the same
+ * serif reading font as the rendered display. Code and tables keep the monospace font
+ * that actually suits them.
+ */
+function isProseBlock(source: string): boolean {
+  const s = source.trimStart()
+  if (/^(```|~~~)/.test(s)) return false // fenced code
+  if (/^( {4,}|\t)/.test(source)) return false // indented code
+  if (s.includes('|') && TABLE_DELIM.test(s)) return false // table
+  return true
+}
 
 export function Block({
   block,
@@ -29,6 +62,7 @@ export function Block({
   onAiWrite?: (onDelta: (t: string) => void) => Promise<string>
 }) {
   const [draft, setDraft] = useState(block.source)
+  const prose = useMemo(() => isProseBlock(block.source), [block.source])
 
   useEffect(() => {
     if (editing) setDraft(block.source)
@@ -52,7 +86,7 @@ export function Block({
 
   return (
     <div
-      className="block editing"
+      className={`block editing ${prose ? 'prose' : 'code'}`}
       onClick={(e) => e.stopPropagation()}
       onKeyDownCapture={(e) => {
         if (e.key === 'Escape') {
@@ -70,7 +104,7 @@ export function Block({
     >
       <CodeMirror
         value={draft}
-        theme="dark"
+        theme="none"
         autoFocus
         basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
         extensions={mdExtensions}

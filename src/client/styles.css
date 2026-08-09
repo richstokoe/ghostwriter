@@ -901,9 +901,19 @@ body {
 .block.preview th { background: var(--bg-3); font-weight: 600; }
 .block.preview a { color: var(--accent); }
 
-/* CodeMirror */
-.block.editing .cm-editor { font-family: var(--mono); font-size: 14px; border-radius: 6px; }
+/* CodeMirror — the source view mirrors how each block renders when displayed.
+ * CodeMirror sets its font-family on .cm-scroller, so override there (not .cm-editor). */
+.block.editing .cm-editor { border-radius: 6px; }
 .block.editing .cm-editor.cm-focused { outline: none; }
+/* Ordinary text (prose) edits in the serif reading font, at the display size. */
+.block.editing.prose .cm-scroller {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.68;
+  color: var(--prose);
+}
+/* Code and tables keep the monospace font that suits them. */
+.block.editing.code .cm-scroller { font-family: var(--mono); font-size: 14px; }
 
 .block-toolbar {
   display: flex;
