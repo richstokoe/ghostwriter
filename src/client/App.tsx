@@ -294,6 +294,8 @@ export function App() {
         selectedCharId={selectedCharId}
         onSelectChar={setSelectedCharId}
         onCreateCharacter={onCreateCharacter}
+        onCharactersBuilt={reloadCharacters}
+        root={root}
         onConfigure={() => setShowMapper(true)}
       />
 

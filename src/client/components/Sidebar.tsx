@@ -20,6 +20,8 @@ export function Sidebar({
   selectedCharId,
   onSelectChar,
   onCreateCharacter,
+  onCharactersBuilt,
+  root,
   onConfigure,
 }: {
   view: SidebarView
@@ -35,6 +37,8 @@ export function Sidebar({
   selectedCharId: string | null
   onSelectChar: (id: string) => void
   onCreateCharacter: (name: string) => void
+  onCharactersBuilt: () => void
+  root?: string
   onConfigure: () => void
 }) {
   return (
@@ -81,6 +85,8 @@ export function Sidebar({
           selectedId={selectedCharId}
           onSelect={onSelectChar}
           onCreate={onCreateCharacter}
+          onBuilt={onCharactersBuilt}
+          root={root}
         />
       )}
       {view === 'timeline' && (

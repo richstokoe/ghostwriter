@@ -110,6 +110,7 @@ export function BlockEditor({ doc, onChange, onAiWrite }: { doc: string; onChang
           <InsertZone index={i} />
           <Block
             block={b}
+            number={i + 1}
             editing={editingId === b.id}
             onStartEdit={() => {
               setInsertAt(null)

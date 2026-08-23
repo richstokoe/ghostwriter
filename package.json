@@ -1,7 +1,7 @@
 {
   "name": "ghostwriter",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "AI-facilitated book-authoring tool — Markdown-on-disk, local-first.",
   "author": "Rich Stokoe",

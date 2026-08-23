@@ -26,6 +26,26 @@ function appIconPath(): string | undefined {
   return fs.existsSync(p) ? p : undefined
 }
 
+// ---- remember the last-opened book folder across launches ----
+function statePath(): string {
+  return path.join(app.getPath('userData'), 'ghostwriter-state.json')
+}
+function readLastRoot(): string | undefined {
+  try {
+    const s = JSON.parse(fs.readFileSync(statePath(), 'utf8'))
+    return typeof s?.lastRoot === 'string' ? s.lastRoot : undefined
+  } catch {
+    return undefined
+  }
+}
+function writeLastRoot(root: string | undefined): void {
+  try {
+    fs.writeFileSync(statePath(), JSON.stringify({ lastRoot: root ?? null }, null, 2))
+  } catch (err) {
+    console.error('could not persist last folder:', err)
+  }
+}
+
 /** Copy the bundled sample book into a writable location on first run. */
 function ensureDefaultProject(resBase: string): string {
   const dest = path.join(app.getPath('userData'), 'sample-project')
@@ -69,7 +89,22 @@ async function createWindow() {
   win.on('closed', () => {
     win = null
   })
-  await win.loadURL(baseUrl)
+
+  // Persist whichever book folder is currently loaded (from ?root), so the next launch
+  // can reopen it. Fires for opens via the menu and for client-side navigations alike.
+  win.webContents.on('did-navigate', (_e, url) => {
+    try {
+      writeLastRoot(new URL(url).searchParams.get('root') || undefined)
+    } catch {
+      /* ignore non-http(s) urls */
+    }
+  })
+
+  // Reopen the last folder if it still exists; otherwise fall back to the default book.
+  const last = readLastRoot()
+  if (last && !fs.existsSync(last)) writeLastRoot(undefined)
+  const startUrl = last && fs.existsSync(last) ? `${baseUrl}/?root=${encodeURIComponent(last)}` : baseUrl
+  await win.loadURL(startUrl)
 }
 
 async function openBookFolder() {

@@ -1,25 +1,49 @@
 import { useState } from 'react'
-import type { Character } from '../lib/api'
+import { buildCharacters, type Character } from '../lib/api'
 
 export function CharacterList({
   characters,
   selectedId,
   onSelect,
   onCreate,
+  root,
+  onBuilt,
 }: {
   characters: Character[]
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: (name: string) => void
+  root?: string
+  onBuilt: () => void
 }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
+  const [building, setBuilding] = useState(false)
+  const [progress, setProgress] = useState('')
+  const [buildError, setBuildError] = useState<string | null>(null)
 
   const submit = () => {
     const n = name.trim()
     if (n) onCreate(n)
     setName('')
     setAdding(false)
+  }
+
+  const build = async () => {
+    setBuilding(true)
+    setBuildError(null)
+    setProgress('Starting…')
+    try {
+      const built = await buildCharacters(root, setProgress)
+      setProgress(`Built ${built.length} profile${built.length === 1 ? '' : 's'}.`)
+      onBuilt()
+      window.setTimeout(() => setProgress(''), 2500)
+    } catch (e) {
+      setBuildError((e as Error).message)
+      setProgress('')
+    } finally {
+      setBuilding(false)
+    }
   }
 
   return (
@@ -62,6 +86,18 @@ export function CharacterList({
           + New character
         </button>
       )}
+
+      <div className="char-build">
+        <button className="btn ghost build-btn" disabled={building} onClick={build}>
+          {building ? 'Building…' : '✨ Build from chapters'}
+        </button>
+        <p className="char-build-hint muted">
+          Reads every chapter and rebuilds a profile for each character, overwriting existing
+          files.
+        </p>
+        {progress && <p className="char-build-progress muted">{progress}</p>}
+        {buildError && <p className="char-build-error">{buildError}</p>}
+      </div>
     </div>
   )
 }
