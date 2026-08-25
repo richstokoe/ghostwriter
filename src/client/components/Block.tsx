@@ -46,6 +46,7 @@ function isProseBlock(source: string): boolean {
 
 export function Block({
   block,
+  number,
   editing,
   onStartEdit,
   onCommit,
@@ -54,6 +55,7 @@ export function Block({
   onAiWrite,
 }: {
   block: BlockT
+  number: number
   editing: boolean
   onStartEdit: () => void
   onCommit: (source: string) => void
@@ -79,6 +81,9 @@ export function Block({
           onStartEdit()
         }}
       >
+        <span className="block-num" aria-hidden>
+          {number}
+        </span>
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.source}</ReactMarkdown>
       </div>
     )

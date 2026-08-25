@@ -82,6 +82,53 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
+  // ---- per-chapter outline ----
+
+  // Resolve a chapter file's outline note path (mirrors chapters/ into outline/).
+  async function outlineRelFor(root: string, file: string): Promise<string> {
+    const m = await manifest.ensureManifest(root)
+    const ch = m.chapters.find((c) => c.file === file)
+    return ch?.outline ?? manifest.outlineFor(file, m.roles)
+  }
+
+  app.get('/outline', async (req, reply) => {
+    const q = req.query as Record<string, unknown>
+    const root = resolveRoot(q?.root)
+    const file = String(q?.file ?? '')
+    if (!file) {
+      reply.code(400)
+      return { error: 'file query param required' }
+    }
+    const rel = await outlineRelFor(root, file)
+    let content = ''
+    try {
+      content = await fs.readFile(safeJoin(root, rel), 'utf8')
+    } catch {
+      /* no outline yet — return empty so the editor can create one on save */
+    }
+    return { file, path: rel, content }
+  })
+
+  app.put('/outline', async (req, reply) => {
+    const body = req.body as { root?: string; file?: string; content?: string }
+    const root = resolveRoot(body?.root)
+    const file = String(body?.file ?? '')
+    if (!file) {
+      reply.code(400)
+      return { error: 'file required' }
+    }
+    try {
+      const rel = await outlineRelFor(root, file)
+      const abs = safeJoin(root, rel)
+      await fs.mkdir(path.dirname(abs), { recursive: true })
+      await fs.writeFile(abs, String(body?.content ?? ''), 'utf8')
+      return { ok: true, path: rel }
+    } catch (err) {
+      reply.code(400)
+      return { error: (err as Error).message }
+    }
+  })
+
   // ---- folder config / mapping ----
 
   app.get('/config', async (req) => {

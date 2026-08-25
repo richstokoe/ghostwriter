@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { loadVoice } from './voice'
 import { ensureManifest, outlineFor } from './manifest'
+import type { Character } from './characters'
 import type { LintRule } from '../shared/lint'
 
 export type Provider = 'ollama' | 'lmstudio' | 'openai' | 'anthropic'
@@ -296,6 +297,171 @@ export async function chatStream(cfg: AiConfig, system: string, user: string, ma
     if (delta.reasoning_content) onEvent('reasoning', delta.reasoning_content)
     if (delta.content) onEvent('delta', delta.content)
   })
+}
+
+// ---------- character builder ----------
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'character'
+}
+
+/**
+ * Repair the common ways local models corrupt otherwise-valid JSON *between* fields. Each
+ * pattern is anchored to structural positions (right after `,`/`{`/`},`) so it can't match
+ * inside a string value. Only ever applied to already-unparseable text.
+ */
+function repairModelJson(s: string): string {
+  return s
+    .replace(/([,{]\s*)\/(\w+"\s*:)/g, '$1"$2') // `/age": ` (lost opening quote) → `"age": `
+    .replace(/([,{]\s*)\|\s+(")/g, '$1$2') // `| "status":` (stray pipe) → `"status":`
+    .replace(/\},(\s*)("\w+"\s*:)/g, '},$1{ $2') // `}, "name":` (missing `{`) → `}, { "name":`
+}
+
+/**
+ * Leniently pull the JSON array/object out of a model reply. Local models often emit
+ * *almost*-valid JSON (a stray character, a missing brace), so we escalate:
+ *   1. parse as-is; 2. repair the known corruption patterns and re-parse the whole array;
+ *   3. as a last resort, salvage each well-formed `{…}` object and drop only the corrupt ones.
+ */
+function extractJson(text: string): unknown {
+  const t = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+  const a = t.indexOf('[')
+  const b = t.lastIndexOf(']')
+  if (a >= 0 && b > a) {
+    const body = t.slice(a, b + 1)
+    try {
+      return JSON.parse(body)
+    } catch {
+      /* try repairs */
+    }
+    try {
+      const v = JSON.parse(repairModelJson(body))
+      if (Array.isArray(v)) return v
+    } catch {
+      /* try per-object salvage */
+    }
+    const salvaged: unknown[] = []
+    // Flat profile objects have no nested braces, so innermost `{…}` matching is robust even
+    // when a stray quote elsewhere would desync a string-aware scanner.
+    for (const block of body.match(/\{[^{}]*\}/g) ?? []) {
+      try {
+        salvaged.push(JSON.parse(block))
+      } catch {
+        try {
+          salvaged.push(JSON.parse(repairModelJson(block)))
+        } catch {
+          /* drop this object */
+        }
+      }
+    }
+    if (salvaged.length) return salvaged
+  }
+  const o = t.indexOf('{')
+  const c = t.lastIndexOf('}')
+  if (o >= 0 && c > o) {
+    try {
+      return JSON.parse(t.slice(o, c + 1))
+    } catch {
+      /* fall through */
+    }
+  }
+  return null
+}
+
+// Exposed for tests.
+export const __extractJson = extractJson
+
+export type BuildProgress = (message: string) => void
+
+/**
+ * Read every chapter, extract the cast per chapter, then synthesise one profile per
+ * character. Returns the profiles (the caller decides whether/how to persist them).
+ * Two-stage so it fits small local-model context windows: one pass per chapter, then a
+ * single synthesis pass over the compact notes.
+ */
+export async function buildCharacterProfiles(root: string, onProgress?: BuildProgress): Promise<Character[]> {
+  const cfg = await loadConfig()
+  if (!cfg.model) throw new Error('no model selected — pick one in AI settings')
+
+  const m = await ensureManifest(root)
+  if (!m.chapters.length) throw new Error('no chapters found to scan')
+
+  // Stage 1 — per-chapter extraction, merged by normalised name.
+  const merged = new Map<string, { name: string; notes: string[] }>()
+  const CHAPTER_CAP = 16000
+  const stage1System = [
+    'You are a literary analyst. Identify the named characters who appear or are referenced in this chapter.',
+    'Respond with STRICT JSON ONLY: an array of objects, each {"name": string, "note": string} — no preamble, no markdown, no code fences.',
+    'name = the character as named in the text. note = one or two sentences on who they are and what they do in THIS chapter. If there are no named characters, return [].',
+  ].join('\n')
+
+  for (let i = 0; i < m.chapters.length; i++) {
+    const ch = m.chapters[i]
+    const label = ch.title ?? ch.file
+    onProgress?.(`Scanning “${label}” (${i + 1}/${m.chapters.length})…`)
+    let prose = ''
+    try {
+      prose = await fs.readFile(path.join(root, ch.file), 'utf8')
+    } catch {
+      continue
+    }
+    if (!prose.trim()) continue
+    let parsed: unknown
+    try {
+      const reply = await chat(cfg, stage1System, `CHAPTER: ${label}\n\n${prose.slice(0, CHAPTER_CAP)}\n\nReturn the JSON array now.`, 1500)
+      parsed = extractJson(reply)
+    } catch (err) {
+      onProgress?.(`(skipped “${label}”: ${(err as Error).message})`)
+      continue
+    }
+    if (!Array.isArray(parsed)) continue
+    for (const item of parsed as Array<Record<string, unknown>>) {
+      const name = String(item?.name ?? '').trim()
+      const note = String(item?.note ?? '').trim()
+      if (!name) continue
+      const key = name.toLowerCase().replace(/^the\s+/, '').trim()
+      const entry = merged.get(key) ?? { name, notes: [] }
+      if (note) entry.notes.push(`(${label}) ${note}`)
+      merged.set(key, entry)
+    }
+  }
+  if (!merged.size) throw new Error('no characters could be identified from the chapters')
+
+  // Stage 2 — synthesise all profiles from the compact notes in one call.
+  onProgress?.(`Synthesising ${merged.size} character profile${merged.size === 1 ? '' : 's'}…`)
+  const notesText = [...merged.values()]
+    .map((c) => `${c.name}\n${c.notes.map((n) => `- ${n}`).join('\n') || '- (mentioned)'}`)
+    .join('\n\n')
+  const stage2System = [
+    'You are building a character bible for a novel from notes gathered chapter by chapter.',
+    'Merge notes that clearly describe the same person (including nicknames and aliases).',
+    'Respond with STRICT JSON ONLY: an array of objects with keys "name", "aka", "role", "status", "age", "description" — no preamble, no markdown, no code fences.',
+    'name = canonical name. aka = comma-separated aliases or "". role = their function in the story in a few words (protagonist, antagonist, mentor, minor, …). status = only if clearly implied, else "". age = only if stated, else "". description = a 2–4 sentence profile: who they are, their personality, and their arc across the book.',
+  ].join('\n')
+  const profiles = extractJson(await chat(cfg, stage2System, `NOTES BY CHARACTER:\n\n${notesText}\n\nReturn the JSON array now.`, 4000))
+  if (!Array.isArray(profiles)) throw new Error('the model did not return a valid character list')
+
+  const seen = new Set<string>()
+  const out: Character[] = []
+  for (const p of profiles as Array<Record<string, unknown>>) {
+    const name = String(p?.name ?? '').trim()
+    if (!name) continue
+    let id = slugify(name)
+    while (seen.has(id)) id += '-2'
+    seen.add(id)
+    const str = (v: unknown) => String(v ?? '').trim()
+    out.push({
+      id,
+      name,
+      role: str(p.role) || undefined,
+      aka: str(p.aka) || undefined,
+      status: str(p.status) || undefined,
+      age: str(p.age) || undefined,
+      description: str(p.description),
+    })
+  }
+  if (!out.length) throw new Error('no character profiles were produced')
+  return out
 }
 
 /** Read an SSE response body and hand each parsed `data:` JSON object to `onData`. */

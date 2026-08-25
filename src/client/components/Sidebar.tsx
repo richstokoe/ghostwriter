@@ -22,8 +22,9 @@ export function Sidebar({
   selectedCharId,
   onSelectChar,
   onCreateCharacter,
-  onConfigure,
+  onCharactersBuilt,
   root,
+  onConfigure,
   onOpenSearch,
 }: {
   view: SidebarView
@@ -39,6 +40,7 @@ export function Sidebar({
   selectedCharId: string | null
   onSelectChar: (id: string) => void
   onCreateCharacter: (name: string) => void
+  onCharactersBuilt: () => void
   onConfigure: () => void
   root?: string
   onOpenSearch: (hit: SearchOpen) => void
@@ -90,39 +92,42 @@ export function Sidebar({
               Voice
             </button>
           </div>
-
-          {view === 'chapters' && (
-            <Organiser
-              project={project}
-              selected={selected}
-              onSelect={onSelect}
-              onCreateChapter={onCreateChapter}
-              onDeleteChapter={onDeleteChapter}
-              onMoveChapter={onMoveChapter}
-              onSetTarget={onSetTarget}
-            />
-          )}
-          {view === 'characters' && (
-            <CharacterList
-              characters={characters}
-              selectedId={selectedCharId}
-              onSelect={onSelectChar}
-              onCreate={onCreateCharacter}
-            />
-          )}
-          {view === 'timeline' && (
-            <div className="sidebar-hint muted">
-              The timeline spans the whole story. Events can link to any chapter.
-            </div>
-          )}
-          {view === 'voice' && (
-            <div className="sidebar-hint muted">
-              The voice guide shapes how the AI drafts and reviews prose. Edit it in the main
-              panel; saving re-reads the house-style lint rules too.
-            </div>
-          )}
         </>
-      )}
+      )
+    }
+
+    {view === 'chapters' && (
+      <Organiser
+        project={project}
+        selected={selected}
+        onSelect={onSelect}
+        onCreateChapter={onCreateChapter}
+        onDeleteChapter={onDeleteChapter}
+        onMoveChapter={onMoveChapter}
+        onSetTarget={onSetTarget}
+      />
+    )}
+    {view === 'characters' && (
+      <CharacterList
+        characters={characters}
+        selectedId={selectedCharId}
+        onSelect={onSelectChar}
+        onCreate={onCreateCharacter}
+        onBuilt={onCharactersBuilt}
+        root={root}
+      />
+    )}
+    {view === 'timeline' && (
+      <div className="sidebar-hint muted">
+        The timeline spans the whole story. Events can link to any chapter.
+      </div>
+    )}
+    {view === 'voice' && (
+      <div className="sidebar-hint muted">
+        The voice guide shapes how the AI drafts and reviews prose. Edit it in the main
+        panel; saving re-reads the house-style lint rules too.
+      </div>
+    )}
 
       <div className="sidebar-foot">
         <span className="foot-label">Appearance</span>

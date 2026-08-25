@@ -242,6 +242,29 @@ export async function saveVoice(content: string, root?: string): Promise<void> {
   if (!res.ok) throw new Error(`PUT /voice → ${res.status}`)
 }
 
+// ---------- per-chapter outline ----------
+
+export interface OutlineFile {
+  file: string
+  path: string
+  content: string
+}
+
+export async function fetchOutline(file: string, root?: string): Promise<OutlineFile> {
+  const res = await apiFetch('file', `Load outline for ${file}`, `/api/outline${qs({ root, file })}`)
+  if (!res.ok) throw new Error(`GET /outline → ${res.status}`)
+  return res.json()
+}
+
+export async function saveOutline(file: string, content: string, root?: string): Promise<void> {
+  const res = await apiFetch('file', `Save outline for ${file}`, '/api/outline', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ root, file, content }),
+  })
+  if (!res.ok) throw new Error(`PUT /outline → ${res.status}`)
+}
+
 // ---------- ai ----------
 
 export interface AiPublicConfig {
@@ -366,6 +389,58 @@ export function aiReviewStream(
   handlers: StreamHandlers,
 ): Promise<string> {
   return postSSE('/api/ai/review', 'AI: review chapter', { root, chapterFile, prose }, handlers)
+}
+
+/**
+ * Scans every chapter and rebuilds a profile for each character, overwriting the
+ * character files. Reports `progress` messages as it works; resolves with the saved profiles.
+ */
+export async function buildCharacters(
+  root: string | undefined,
+  onProgress: (message: string) => void,
+): Promise<Character[]> {
+  const id = pushActivity('char', 'AI: build characters', 'POST')
+  const t0 = performance.now()
+  try {
+    const res = await fetch('/api/ai/characters/build', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ root }),
+    })
+    if (!res.ok || !res.body) throw new Error(`POST /ai/characters/build → ${res.status}`)
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let event = 'message'
+    let result: Character[] = []
+
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let nl: number
+      while ((nl = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, nl).replace(/\r$/, '')
+        buffer = buffer.slice(nl + 1)
+        if (line.startsWith('event:')) {
+          event = line.slice(6).trim()
+        } else if (line.startsWith('data:')) {
+          const payload = JSON.parse(line.slice(5).trim())
+          if (event === 'progress') onProgress(payload.message)
+          else if (event === 'done') result = payload.characters ?? []
+          else if (event === 'error') throw new Error(payload.message)
+        } else if (line === '') {
+          event = 'message'
+        }
+      }
+    }
+    finishActivity(id, { status: 'ok', durationMs: Math.round(performance.now() - t0) })
+    return result
+  } catch (e) {
+    finishActivity(id, { status: 'error', durationMs: Math.round(performance.now() - t0), message: (e as Error).message })
+    throw e
+  }
 }
 
 /** Leniently extract the JSON notes array from a model reply (tolerates code fences / stray prose). */

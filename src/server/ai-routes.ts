@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { resolveRoot } from './paths'
 import {
   PROVIDER_DEFAULTS,
+  buildCharacterProfiles,
   buildPrompt,
   buildReviewPrompt,
   chatStream,
@@ -12,6 +13,7 @@ import {
   type AiConfig,
   type DraftMode,
 } from './ai'
+import { saveCharacter } from './characters'
 
 const SSE_HEADERS = {
   'content-type': 'text/event-stream',
@@ -86,6 +88,31 @@ export const aiRoutes: FastifyPluginAsync = async (app) => {
       const { system, user, maxTokens } = await buildReviewPrompt(root, b.chapterFile, b.prose ?? '')
       await chatStream(cfg, system, user, maxTokens, (kind, text) => send(kind, { text }))
       send('done', {})
+    } catch (err) {
+      send('error', { message: (err as Error).message })
+    }
+    raw.end()
+  })
+
+  // Reads every chapter and (re)builds a profile for each character, overwriting the
+  // character files. Streams `progress` messages, then `done` with the saved profiles.
+  app.post('/characters/build', async (req, reply) => {
+    const b = req.body as { root?: string }
+    const root = resolveRoot(b?.root)
+
+    reply.hijack()
+    const raw = reply.raw
+    raw.writeHead(200, SSE_HEADERS)
+    const send = (event: string, data: unknown) => raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+
+    try {
+      const profiles = await buildCharacterProfiles(root, (message) => send('progress', { message }))
+      const saved = []
+      for (const c of profiles) {
+        send('progress', { message: `Saving profile for ${c.name}…` })
+        saved.push(await saveCharacter(root, c))
+      }
+      send('done', { characters: saved })
     } catch (err) {
       send('error', { message: (err as Error).message })
     }

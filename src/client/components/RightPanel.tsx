@@ -1,10 +1,11 @@
 import { GitPanel } from './GitPanel'
 import { LintPanel } from './LintPanel'
 import { AiPanel } from './AiPanel'
+import { OutlineEditor } from './OutlineEditor'
 import type { Finding } from '../../shared/lint'
 import type { GitStatus } from '../../shared/types'
 
-export type PanelTab = 'ai' | 'git' | 'lint'
+export type PanelTab = 'ai' | 'git' | 'lint' | 'outline'
 
 export function RightPanel({
   tab,
@@ -54,6 +55,9 @@ export function RightPanel({
         <button className={tab === 'lint' ? 'active' : ''} onClick={() => onTab('lint')}>
           Lint{lintBadge ? <span className="tab-badge warn">{lintBadge}</span> : null}
         </button>
+        <button className={tab === 'outline' ? 'active' : ''} onClick={() => onTab('outline')}>
+          Outline
+        </button>
       </div>
 
       <div className="panel-body">
@@ -72,6 +76,9 @@ export function RightPanel({
           />
         )}
         {tab === 'lint' && <LintPanel findings={findings} custom={lintCustom} onLocate={onLocate} />}
+        {tab === 'outline' && (
+          <OutlineEditor root={root} selectedFile={selectedFile} chapterTitle={chapterTitle} />
+        )}
       </div>
     </aside>
   )
