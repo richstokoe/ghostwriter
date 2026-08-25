@@ -429,3 +429,33 @@ export async function gitDiff(filePath?: string, hash?: string, root?: string): 
   if (!res.ok) throw new Error(`GET /git/diff → ${res.status}`)
   return (await res.json()).diff ?? ''
 }
+
+// ---------- project-wide search ("Find anywhere") ----------
+
+export interface SearchMatch {
+  line: number
+  col: number
+  length: number
+  text: string
+}
+
+export interface SearchFileResult {
+  file: string
+  role: string
+  label: string
+  matches: SearchMatch[]
+}
+
+export interface SearchResults {
+  query: string
+  results: SearchFileResult[]
+  fileCount: number
+  matchCount: number
+  truncated: boolean
+}
+
+export async function searchAll(query: string, root?: string): Promise<SearchResults> {
+  const res = await apiFetch('project', `Search: ${query}`, `/api/search${qs({ root, q: query })}`)
+  if (!res.ok) throw new Error(`GET /search → ${res.status}`)
+  return res.json()
+}

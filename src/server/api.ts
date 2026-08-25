@@ -9,6 +9,7 @@ import type { Roles } from '../shared/types'
 import * as manifest from './manifest'
 import * as chars from './characters'
 import * as timeline from './timeline'
+import { searchProject } from './search'
 
 const IGNORED_DIRS = new Set(['.git', 'node_modules', '.ghostwriter', '.obsidian'])
 
@@ -100,6 +101,14 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.get('/dirs', async (req) => {
     const root = resolveRoot((req.query as Record<string, unknown>)?.root)
     return { root, dirs: await listDirs(root) }
+  })
+
+  // ---- project-wide search ("Find anywhere") ----
+
+  app.get('/search', async (req) => {
+    const q = req.query as Record<string, unknown>
+    const root = resolveRoot(q?.root)
+    return searchProject(root, typeof q?.q === 'string' ? q.q : '')
   })
 
   app.post('/config', async (req, reply) => {

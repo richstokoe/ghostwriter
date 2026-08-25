@@ -18,6 +18,8 @@ import {
 } from './lib/api'
 import { Sidebar, type SidebarView } from './components/Sidebar'
 import { FolderMapper } from './components/FolderMapper'
+import { FindBar } from './components/FindBar'
+import type { SearchOpen } from './components/SearchResults'
 import { BlockEditor } from './components/BlockEditor'
 import { CharacterEditor } from './components/CharacterEditor'
 import { TimelineView } from './components/TimelineView'
@@ -57,9 +59,24 @@ export function App() {
 
   const [showMapper, setShowMapper] = useState(false)
 
+  const [findOpen, setFindOpen] = useState(false)
+  const [findQuery, setFindQuery] = useState('')
+
   useEffect(() => {
     localStorage.setItem('gw.autoCommit', autoCommit ? '1' : '0')
   }, [autoCommit])
+
+  // Cmd/Ctrl+F opens the in-chapter find bar (only meaningful in the chapter view).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'f' && view === 'chapters') {
+        e.preventDefault()
+        setFindOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [view])
 
   const refreshGit = useCallback(async () => {
     try {
@@ -273,6 +290,34 @@ export function App() {
     setSelected(file)
   }, [])
 
+  // Open a "Find anywhere" result in the right place: chapters (and outlines, mapped to
+  // their chapter) jump into the editor with find primed; other roles switch their view.
+  const onOpenSearch = useCallback(
+    (hit: SearchOpen) => {
+      const base = (p: string) => p.split('/').pop() ?? p
+      const openChapterWithFind = (file: string) => {
+        setView('chapters')
+        setSelected(file)
+        setFindQuery(hit.query)
+        setFindOpen(true)
+      }
+      if (hit.role === 'chapters') {
+        openChapterWithFind(hit.file)
+      } else if (hit.role === 'outline') {
+        const ch = project?.chapters.find((c) => base(c.file) === base(hit.file))
+        if (ch) openChapterWithFind(ch.file)
+      } else if (hit.role === 'characters') {
+        setView('characters')
+        setSelectedCharId(base(hit.file).replace(/\.md$/i, ''))
+      } else if (hit.role === 'timeline') {
+        setView('timeline')
+      } else if (hit.role === 'voice') {
+        setView('voice')
+      }
+    },
+    [project],
+  )
+
   const selectedChar = characters.find((c) => c.id === selectedCharId) ?? null
   const changed = git?.files?.length ?? 0
   const warnCount = findings.length
@@ -295,6 +340,8 @@ export function App() {
         onSelectChar={setSelectedCharId}
         onCreateCharacter={onCreateCharacter}
         onConfigure={() => setShowMapper(true)}
+        root={root}
+        onOpenSearch={onOpenSearch}
       />
 
       {view === 'chapters' && (
@@ -317,11 +364,17 @@ export function App() {
                   ⑂ {git.branch} · {git.clean ? 'clean' : `${changed} ✎`}
                 </span>
               )}
+              <button className="icon-btn" title="Find in chapter (⌘/Ctrl+F)" onClick={() => setFindOpen((o) => !o)}>
+                Find
+              </button>
               <button className="icon-btn" onClick={() => setShowPanel((s) => !s)}>
                 {showPanel ? 'Hide Panel' : 'Panel'}
               </button>
             </div>
           </header>
+          {findOpen && (
+            <FindBar query={findQuery} onQuery={setFindQuery} onClose={() => setFindOpen(false)} doc={doc} />
+          )}
           <div className="scroll">
             {selected ? (
               <BlockEditor doc={doc} onChange={onChangeDoc} onAiWrite={aiWriteParagraph} />
