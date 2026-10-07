@@ -1,5 +1,13 @@
 import path from 'node:path'
 
+/** Directories never worth scanning/searching/watching — build output, VCS internals, etc. */
+export const IGNORED_DIRS = new Set(['.git', 'node_modules', '.ghostwriter', '.obsidian'])
+
+/** True for a directory name that should be skipped everywhere we walk the project tree. */
+export function isIgnoredDir(name: string): boolean {
+  return IGNORED_DIRS.has(name) || name.startsWith('dist')
+}
+
 /**
  * Default project when no ?root is given — the bundled sample book. Electron overrides
  * this (via GHOSTWRITER_DEFAULT_ROOT) with a writable copy in the user's data dir.

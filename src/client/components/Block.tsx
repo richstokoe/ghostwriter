@@ -44,6 +44,13 @@ function isProseBlock(source: string): boolean {
   return true
 }
 
+export interface BlockConflict {
+  /** 'changed': edited elsewhere while you were editing it here. 'removed': deleted elsewhere. */
+  kind: 'changed' | 'removed'
+  /** The on-disk block's new text; null for 'removed' (there's nothing left to show). */
+  incomingText: string | null
+}
+
 export function Block({
   block,
   number,
@@ -53,6 +60,9 @@ export function Block({
   onCancel,
   onDelete,
   onAiWrite,
+  conflict,
+  onKeepMine,
+  onTakeIncoming,
 }: {
   block: BlockT
   number: number
@@ -62,6 +72,11 @@ export function Block({
   onCancel: () => void
   onDelete: () => void
   onAiWrite?: (onDelta: (t: string) => void) => Promise<string>
+  /** Set when this block changed on disk while the user was mid-edit; expands the editor
+   *  to show both versions with controls to resolve, instead of silently overwriting. */
+  conflict?: BlockConflict | null
+  onKeepMine?: (draft: string) => void
+  onTakeIncoming?: () => void
 }) {
   const [draft, setDraft] = useState(block.source)
   const prose = useMemo(() => isProseBlock(block.source), [block.source])
@@ -91,22 +106,31 @@ export function Block({
 
   return (
     <div
-      className={`block editing ${prose ? 'prose' : 'code'}`}
+      className={`block editing ${prose ? 'prose' : 'code'}${conflict ? ' conflict' : ''}`}
       onClick={(e) => e.stopPropagation()}
       onKeyDownCapture={(e) => {
         if (e.key === 'Escape') {
           e.preventDefault()
           onCancel()
-        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        } else if (!conflict && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault()
           onCommit(draft)
         }
       }}
       onBlur={(e) => {
-        // Save as soon as focus leaves the block (but not when moving within it).
+        // While a conflict is showing, only the resolve buttons below may commit — losing
+        // focus (e.g. clicking one of them) must not race a stale auto-save against it.
+        if (conflict) return
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onCommit(draft)
       }}
     >
+      {conflict && (
+        <div className="block-conflict-banner" role="alert">
+          {conflict.kind === 'removed'
+            ? 'This block was deleted elsewhere while you were editing it.'
+            : 'This block changed elsewhere while you were editing it.'}
+        </div>
+      )}
       <CodeMirror
         value={draft}
         theme="none"
@@ -115,31 +139,53 @@ export function Block({
         extensions={mdExtensions}
         onChange={setDraft}
       />
+      {conflict?.incomingText != null && (
+        <div className="block-conflict-incoming">
+          <div className="block-conflict-label">Incoming</div>
+          <pre className="block-conflict-text">{conflict.incomingText}</pre>
+        </div>
+      )}
       <div className="block-toolbar">
-        <span className="hint">⌘/Ctrl+↵ save · Esc cancel</span>
-        <span className="spacer" />
-        {onAiWrite && !draft.trim() && (
-          <AiWriteButton onAiWrite={onAiWrite} onAppend={(t) => setDraft((d) => d + t)} />
+        {conflict ? (
+          <>
+            <span className="hint">Choose a version to continue</span>
+            <span className="spacer" />
+            {/* onClick, not onMouseDown: no blur-save race here, and it keeps these keyboard-reachable */}
+            <button className="btn-icon" onClick={() => onTakeIncoming?.()}>
+              {conflict.kind === 'removed' ? 'Discard mine' : 'Take incoming'}
+            </button>
+            <button className="btn small" onClick={() => onKeepMine?.(draft)}>
+              Keep mine
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="hint">⌘/Ctrl+↵ save · Esc cancel</span>
+            <span className="spacer" />
+            {onAiWrite && !draft.trim() && (
+              <AiWriteButton onAiWrite={onAiWrite} onAppend={(t) => setDraft((d) => d + t)} />
+            )}
+            <button
+              className="btn-icon danger"
+              title="Delete block"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onDelete()
+              }}
+            >
+              Delete
+            </button>
+            <button
+              className="btn small"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onCommit(draft)
+              }}
+            >
+              Save
+            </button>
+          </>
         )}
-        <button
-          className="btn-icon danger"
-          title="Delete block"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            onDelete()
-          }}
-        >
-          Delete
-        </button>
-        <button
-          className="btn small"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            onCommit(draft)
-          }}
-        >
-          Save
-        </button>
       </div>
     </div>
   )

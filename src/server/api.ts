@@ -3,15 +3,14 @@ import path from 'node:path'
 import type { FastifyPluginAsync } from 'fastify'
 import { loadProject } from './project'
 import { loadVoice } from './voice'
-import { resolveRoot, safeJoin } from './paths'
+import { resolveRoot, safeJoin, isIgnoredDir } from './paths'
 import { loadConfig, saveConfig, rolesOf, isConfigured, isAutoRecognised } from './config'
 import type { Roles } from '../shared/types'
 import * as manifest from './manifest'
 import * as chars from './characters'
 import * as timeline from './timeline'
 import { searchProject } from './search'
-
-const IGNORED_DIRS = new Set(['.git', 'node_modules', '.ghostwriter', '.obsidian'])
+import { watchProject } from './watch'
 
 /** List sub-directories under root (relative, posix) up to `maxDepth` levels for the mapper. */
 async function listDirs(root: string, maxDepth = 2): Promise<string[]> {
@@ -25,7 +24,7 @@ async function listDirs(root: string, maxDepth = 2): Promise<string[]> {
     }
     for (const e of entries) {
       if (!e.isDirectory()) continue
-      if (IGNORED_DIRS.has(e.name) || e.name.startsWith('dist')) continue
+      if (isIgnoredDir(e.name)) continue
       const child = rel ? `${rel}/${e.name}` : e.name
       out.push(child)
       if (depth < maxDepth) await walk(child, depth + 1)
@@ -156,6 +155,37 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     const q = req.query as Record<string, unknown>
     const root = resolveRoot(q?.root)
     return searchProject(root, typeof q?.q === 'string' ? q.q : '')
+  })
+
+  // ---- live file watching ----
+
+  // Streams `change` events ({ path, kind }) for the project folder as Server-Sent Events,
+  // so an open client can react when a file changes on disk outside the app — a git pull,
+  // another window, an external editor. One chokidar watcher per connection; closed when
+  // the client disconnects (tab closed, EventSource.close(), or the project root changes).
+  app.get('/watch', async (req, reply) => {
+    const q = req.query as Record<string, unknown>
+    const root = resolveRoot(q?.root)
+
+    reply.hijack()
+    const raw = reply.raw
+    raw.writeHead(200, {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
+    })
+    const send = (event: string, data: unknown) => raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+
+    const handle = watchProject(root, (relPath, kind) => send('change', { path: relPath, kind }))
+    // Keep intermediate proxies from timing out an idle connection; also a cheap way to
+    // notice the stream is still alive.
+    const heartbeat = setInterval(() => raw.write(': ping\n\n'), 25000)
+
+    req.raw.on('close', () => {
+      clearInterval(heartbeat)
+      handle.close().catch(() => {})
+    })
   })
 
   app.post('/config', async (req, reply) => {

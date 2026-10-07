@@ -1,10 +1,9 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { loadConfig, rolesOf } from './config'
+import { isIgnoredDir } from './paths'
 import type { Roles } from '../shared/types'
 
-// Directories never worth searching (mirrors api.ts's listDirs ignore set).
-const IGNORED_DIRS = new Set(['.git', 'node_modules', '.ghostwriter', '.obsidian'])
 // Only text formats a book project stores prose/metadata in.
 const TEXT_EXT = new Set(['.md', '.markdown', '.mdx', '.txt', '.yml', '.yaml'])
 
@@ -84,7 +83,7 @@ async function walk(root: string): Promise<string[]> {
     for (const e of entries) {
       const child = rel ? `${rel}/${e.name}` : e.name
       if (e.isDirectory()) {
-        if (IGNORED_DIRS.has(e.name) || e.name.startsWith('dist')) continue
+        if (isIgnoredDir(e.name)) continue
         await recurse(child)
       } else if (e.isFile() && TEXT_EXT.has(path.extname(e.name).toLowerCase())) {
         out.push(child)

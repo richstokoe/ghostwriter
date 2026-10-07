@@ -534,3 +534,25 @@ export async function searchAll(query: string, root?: string): Promise<SearchRes
   if (!res.ok) throw new Error(`GET /search → ${res.status}`)
   return res.json()
 }
+
+// ---------- live file watching ----------
+
+export type FileChangeKind = 'add' | 'change' | 'unlink'
+
+/**
+ * Watch the project folder for on-disk changes outside this app (a git pull, another
+ * window, an external editor). Returns a handle to stop watching — call it when the
+ * project root changes or the consuming component unmounts.
+ */
+export function watchProject(root: string | undefined, onChange: (relPath: string, kind: FileChangeKind) => void): { stop: () => void } {
+  const es = new EventSource(`/api/watch${qs({ root })}`)
+  es.addEventListener('change', (e) => {
+    try {
+      const data = JSON.parse((e as MessageEvent).data)
+      if (typeof data?.path === 'string') onChange(data.path, data.kind)
+    } catch {
+      /* ignore malformed event */
+    }
+  })
+  return { stop: () => es.close() }
+}

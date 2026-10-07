@@ -717,6 +717,7 @@ body {
   cursor: pointer;
 }
 .icon-btn:hover { background: var(--border); }
+.icon-btn.active { background: var(--accent-dim); color: #fff; border-color: var(--accent-dim); }
 
 /* ---------- Git panel ---------- */
 .git-panel { overflow-y: auto; }
@@ -938,6 +939,40 @@ body {
 }
 /* Code and tables keep the monospace font that suits them. */
 .block.editing.code .cm-scroller { font-family: var(--mono); font-size: 14px; }
+
+/* A block that changed on disk while it was being edited — see BlockEditor's live-watch
+ * reconciliation. Expands to show the local draft (still editable, above) alongside the
+ * incoming on-disk text, with controls to resolve instead of silently overwriting either. */
+.block.editing.conflict { border-color: var(--warn); }
+.block-conflict-banner {
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  color: var(--warn);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.block-conflict-incoming { margin-top: 6px; }
+.block-conflict-label {
+  color: var(--muted);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 0 2px 4px;
+}
+.block-conflict-text {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--prose);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 .block-toolbar {
   display: flex;

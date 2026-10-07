@@ -14,6 +14,7 @@ import {
   saveCharacter,
   saveFile,
   setWordTarget,
+  watchProject,
   type Character,
 } from './lib/api'
 import { Sidebar, type SidebarView } from './components/Sidebar'
@@ -61,6 +62,21 @@ export function App() {
 
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
+
+  const [hideEmpty, setHideEmpty] = useState(() => localStorage.getItem('gw.hideEmpty') === '1')
+  useEffect(() => {
+    localStorage.setItem('gw.hideEmpty', hideEmpty ? '1' : '0')
+  }, [hideEmpty])
+
+  // Latest on-disk content for `selected`, from the live file watcher, once it's been
+  // confirmed to actually differ from `doc` (never our own save echoing back).
+  const [incomingDoc, setIncomingDoc] = useState<string | null>(null)
+  // Read inside the watch callback below so that effect doesn't need to resubscribe (and
+  // thrash the underlying fs watcher) every time `doc` or `selected` changes.
+  const liveRef = useRef({ selected, doc })
+  useEffect(() => {
+    liveRef.current = { selected, doc }
+  })
 
   useEffect(() => {
     localStorage.setItem('gw.autoCommit', autoCommit ? '1' : '0')
@@ -117,6 +133,36 @@ export function App() {
     reloadVoice()
   }, [root, refreshGit, reloadCharacters, reloadVoice])
 
+  // Live file watching: react when something changes on disk outside this app — a git
+  // pull, another window, an external editor — instead of silently going stale.
+  useEffect(() => {
+    const handle = watchProject(root, (relPath, kind) => {
+      const { selected } = liveRef.current
+      if (selected && relPath === selected && kind !== 'unlink') {
+        // The open chapter itself. Hand off to BlockEditor via `incomingDoc` rather than
+        // overwriting `doc` directly — it may have an unsaved edit in progress. Compare
+        // against the latest local content first so our own save doesn't echo back as a
+        // false "incoming change".
+        fetchFile(selected, root)
+          .then((f) => {
+            if (f.content === liveRef.current.doc) return
+            setIncomingDoc(f.content)
+            fetchProject(root).then(setProject).catch(() => {}) // word counts
+            refreshGit()
+          })
+          .catch(() => {})
+        return
+      }
+      // Anything else (another chapter, a character, the timeline, voice, the open chapter
+      // being deleted…) — cheap to just reload the affected lists/metadata.
+      fetchProject(root).then(setProject).catch(() => {})
+      reloadCharacters()
+      reloadVoice()
+      refreshGit()
+    })
+    return () => handle.stop()
+  }, [root, refreshGit, reloadCharacters, reloadVoice])
+
   // Adopt a freshly-saved folder mapping: reset selection and reload dependent data.
   const onConfigSaved = useCallback(
     (p: Project) => {
@@ -133,10 +179,18 @@ export function App() {
   // Load the selected chapter's content.
   useEffect(() => {
     if (!selected) return
+    setIncomingDoc(null) // a pending live update belonged to whichever chapter was open before
     fetchFile(selected, root)
       .then((f) => setDoc(f.content))
       .catch((err) => console.error(err))
   }, [selected, root])
+
+  // Adopt a live-watched update to the open chapter without writing it back — it's already
+  // on disk. (Actual local edits still go through `onChangeDoc`, which does save.)
+  const adoptIncomingDoc = useCallback(() => {
+    if (incomingDoc != null) setDoc(incomingDoc)
+    setIncomingDoc(null)
+  }, [incomingDoc])
 
   const current = project?.chapters.find((c) => c.file === selected) ?? null
   const findings = useMemo(() => runLint(doc, rules), [doc, rules])
@@ -144,6 +198,9 @@ export function App() {
   const onChangeDoc = useCallback(
     async (next: string) => {
       setDoc(next)
+      // This save overwrites the file, so any live update fetched before it is now stale;
+      // a later external change fires the watcher again and is fetched fresh.
+      setIncomingDoc(null)
       if (!selected) return
       setSave('saving')
       try {
@@ -368,6 +425,13 @@ export function App() {
               <button className="icon-btn" title="Find in chapter (⌘/Ctrl+F)" onClick={() => setFindOpen((o) => !o)}>
                 Find
               </button>
+              <button
+                className={hideEmpty ? 'icon-btn active' : 'icon-btn'}
+                title="Hide blocks with no visible content"
+                onClick={() => setHideEmpty((h) => !h)}
+              >
+                {hideEmpty ? 'Show Empty' : 'Hide Empty'}
+              </button>
               <button className="icon-btn" onClick={() => setShowPanel((s) => !s)}>
                 {showPanel ? 'Hide Panel' : 'Panel'}
               </button>
@@ -378,7 +442,14 @@ export function App() {
           )}
           <div className="scroll">
             {selected ? (
-              <BlockEditor doc={doc} onChange={onChangeDoc} onAiWrite={aiWriteParagraph} />
+              <BlockEditor
+                doc={doc}
+                incoming={incomingDoc}
+                onChange={onChangeDoc}
+                onAdoptIncoming={adoptIncomingDoc}
+                onAiWrite={aiWriteParagraph}
+                hideEmpty={hideEmpty}
+              />
             ) : (
               <p className="empty">Select or add a chapter to begin.</p>
             )}
