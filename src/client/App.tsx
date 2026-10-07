@@ -342,7 +342,6 @@ export function App() {
         onCharactersBuilt={reloadCharacters}
         root={root}
         onConfigure={() => setShowMapper(true)}
-        root={root}
         onOpenSearch={onOpenSearch}
       />
 

@@ -6,7 +6,7 @@ import { ensureManifest, outlineFor } from './manifest'
 import type { Character } from './characters'
 import type { LintRule } from '../shared/lint'
 
-export type Provider = 'ollama' | 'lmstudio' | 'openai' | 'anthropic'
+export type Provider = 'ollama' | 'lmstudio' | 'openai' | 'anthropic' | 'gemini'
 
 export interface AiConfig {
   provider: Provider
@@ -26,6 +26,9 @@ export const PROVIDER_DEFAULTS: Record<Provider, ProviderInfo> = {
   lmstudio: { baseUrl: 'http://localhost:1234/v1', label: 'LM Studio (local)', needsKey: false },
   openai: { baseUrl: 'https://api.openai.com/v1', label: 'OpenAI', needsKey: true },
   anthropic: { baseUrl: 'https://api.anthropic.com', label: 'Anthropic', needsKey: true },
+  // Google's OpenAI-compatible endpoint: same request/response shape as `openai`, so it
+  // needs no bespoke handling below — just a provider entry.
+  gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', label: 'Gemini', needsKey: true },
 }
 
 const DEFAULT_CONFIG: AiConfig = {
